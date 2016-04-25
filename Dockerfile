@@ -2,7 +2,7 @@ FROM docker:1.10-dind
 
 # Install apt dependencies
 RUN apk update && \
-    apk --no-cache add openssh openjdk8-jre bash && \
+    apk --no-cache add openssh wget ca-certificates bash git make && \
     rm -rf /tmp/*
 
 RUN for alg in rsa dsa ecdsa ed25519; do \
@@ -13,8 +13,21 @@ RUN for alg in rsa dsa ecdsa ed25519; do \
 
 RUN mkdir /var/run/sshd
 
-# SSH login fix. Otherwise user is kicked off after login
-#RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+ENV JAVA_VERSION=8 \
+    JAVA_UPDATE=92 \
+    JAVA_BUILD=14 \
+    JAVA_HOME="/usr/lib/jvm/default-jvm"
+
+RUN cd "/tmp" && \
+    wget --header "Cookie: oraclelicense=accept-securebackup-cookie;" \
+        "http://download.oracle.com/otn-pub/java/jdk/${JAVA_VERSION}u${JAVA_UPDATE}-b${JAVA_BUILD}/jdk-${JAVA_VERSION}u${JAVA_UPDATE}-linux-x64.tar.gz" && \
+    tar -xzf "jdk-${JAVA_VERSION}u${JAVA_UPDATE}-linux-x64.tar.gz" && \
+    mkdir -p "/usr/lib/jvm" && \
+    mv "/tmp/jdk1.${JAVA_VERSION}.0_${JAVA_UPDATE}" "/usr/lib/jvm/java-${JAVA_VERSION}-oracle" && \
+    ln -s "java-${JAVA_VERSION}-oracle" "$JAVA_HOME" && \
+    ln -s "$JAVA_HOME/bin/"* "/usr/bin/" && \
+    rm -rf "$JAVA_HOME/"*src.zip && \
+    rm "/tmp/"*
 
 # Volume with keys
 VOLUME /etc/ssh/keys
